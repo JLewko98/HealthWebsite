@@ -1,0 +1,7 @@
+# API key and local secrets
+config.js
+
+# Backups / OS
+*.bak
+.DS_Store
+Thumbs.db
