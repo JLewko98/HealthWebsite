@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HealthTrack heart and hockey stick icon">
+  <rect width="512" height="512" rx="0" fill="#132943"/>
+
+  <path
+    d="M256 382 C228 358 169 309 143 270 C115 228 116 173 151 148 C185 123 230 134 256 176 C282 134 327 123 361 148 C396 173 397 228 369 270 C343 309 284 358 256 382 Z"
+    fill="#e11f2a"
+    stroke="#ffffff"
+    stroke-width="22"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M339 151 C388 170 398 230 365 275 C348 299 318 328 289 354 C334 333 393 272 386 203 C383 178 365 158 339 151 Z"
+    fill="#b71620"
+    opacity="0.35"
+  />
+  <path
+    d="M166 278 C183 310 217 342 256 376 C269 365 283 352 296 339 C232 347 190 316 166 278 Z"
+    fill="#b71620"
+    opacity="0.3"
+  />
+
+  <g transform="rotate(-43 256 256)">
+    <path
+      d="M79 211 L370 211 C392 211 410 229 410 251 L410 267 C410 283 423 296 439 296 L469 296 C482 296 493 307 493 320 L493 363 C493 384 476 401 455 401 L392 401 C349 401 314 366 314 323 L314 307 L79 307 Z"
+      fill="#ffffff"
+      stroke="#ffffff"
+      stroke-width="31"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M79 211 L370 211 C392 211 410 229 410 251 L410 267 C410 283 423 296 439 296 L469 296 C482 296 493 307 493 320 L493 363 C493 384 476 401 455 401 L392 401 C349 401 314 366 314 323 L314 307 L79 307 Z"
+      fill="#f8fafc"
+      stroke="#050505"
+      stroke-width="12"
+      stroke-linejoin="round"
+    />
+    <rect x="76" y="218" width="55" height="82" rx="10" fill="#ffffff" stroke="#050505" stroke-width="12"/>
+    <rect x="118" y="224" width="42" height="70" rx="6" fill="#050505"/>
+    <rect x="160" y="224" width="37" height="70" fill="#050505"/>
+    <rect x="206" y="224" width="37" height="70" fill="#050505"/>
+    <rect x="251" y="224" width="37" height="70" fill="#050505"/>
+    <rect x="298" y="224" width="28" height="70" fill="#050505"/>
+    <rect x="139" y="224" width="13" height="70" fill="#ffffff"/>
+    <rect x="188" y="224" width="13" height="70" fill="#ffffff"/>
+    <rect x="234" y="224" width="13" height="70" fill="#ffffff"/>
+    <rect x="279" y="224" width="13" height="70" fill="#ffffff"/>
+    <path d="M336 246 L389 246 L389 270 C389 295 409 315 434 315 L456 315 L456 363 L394 363 C361 363 336 338 336 305 Z" fill="#050505"/>
+    <path d="M386 239 C394 246 398 257 398 267 C398 301 426 324 455 324 L455 345 L438 345 C398 345 366 313 366 273 L366 246 Z" fill="#e2e8f0"/>
+    <path d="M449 315 L468 315 C475 315 481 321 481 328 L481 358 C481 366 475 372 467 372 L449 372 Z" fill="#ffffff"/>
+  </g>
+</svg>
