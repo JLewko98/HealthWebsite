@@ -5,6 +5,912 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="shortcut icon" href="/favicon.svg">
+    <title>HealthTrack AI 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            padding-left: max(0.75rem, env(safe-area-inset-left));
+            padding-right: max(0.75rem, env(safe-area-inset-right));
+            padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+        }
+        /* Prevent iOS zoom when focusing inputs (needs 16px+ font) */
+        input, textarea, select, button { font-size: 16px; }
+        @media (min-width: 640px) {
+            input, textarea, select { font-size: 14px; }
+            button.btn-compact { font-size: 14px; }
+        }
+        .touch-target { min-height: 48px; }
+        .chart-wrap {
+            position: relative;
+            width: 100%;
+            min-height: 220px;
+            height: min(55vw, 320px);
+        }
+        @media (min-width: 640px) {
+            .chart-wrap { height: 300px; min-height: 280px; }
+        }
+        #food-list, #ex-list {
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900 antialiased">
+
+    <nav class="bg-slate-900 px-4 py-3 sm:py-4 text-white shadow-xl text-center mb-4 sm:mb-6 w-full">
+        <h1 class="text-xl sm:text-2xl font-black tracking-tighter">HEALTH<span class="text-blue-500">TRACK</span> AI</h1>
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">History &amp; trend charts</p>
+        <div class="flex items-center justify-center mt-2.5">
+            <span id="sync-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 transition-all duration-300">
+                <span class="h-1.5 w-1.5 rounded-full bg-slate-400 animate-pulse"></span>
+                Checking Storage...
+            </span>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-1 sm:px-4 grid lg:grid-cols-4 gap-4 sm:gap-6">
+        
+        <div class="lg:col-span-3 space-y-4 sm:space-y-6 min-w-0">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-green-100">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <div class="p-2 bg-green-100 rounded-lg text-green-600">🍎</div>
+                        <h2 class="text-xl font-bold text-green-800">Food Intake</h2>
+                    </div>
+                    
+                    <div class="mb-4 pb-4 border-b border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">AI Estimation</p>
+                            <span class="text-[9px] font-extrabold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 ai-counter-badge">15 calls left</span>
+                        </div>
+                        <textarea id="food-desc" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-green-500 mb-2 bg-gray-50" rows="2" placeholder="e.g. Oatmeal with berries"></textarea>
+                        <button type="button" onclick="aiAnalyze('food')" class="touch-target w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 active:bg-green-800 transition shadow-sm btn-compact text-sm">Ask AI</button>
+                    </div>
+
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Manual Entry</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                            <input type="text" id="manual-food-name" placeholder="Food name" autocomplete="off" class="p-3 border rounded-lg bg-white w-full min-w-0">
+                            <input type="number" id="manual-food-cal" placeholder="Calories" inputmode="numeric" class="p-3 border rounded-lg bg-white w-full min-w-0">
+                        </div>
+                        <button type="button" onclick="manualSubmit('food')" class="touch-target w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-200 active:bg-gray-300 transition btn-compact text-sm">Submit Manual</button>
+                    </div>
+
+                    <div id="food-confirm" class="hidden mt-4 p-4 bg-green-50 rounded-xl border border-green-200 text-center">
+                        <p id="food-preview-val" class="text-3xl font-black text-green-600"></p>
+                        <button type="button" onclick="commitLog('food')" class="touch-target w-full bg-green-600 text-white py-3 rounded-lg font-bold mt-2 active:bg-green-800 text-sm">Add to Food Log</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-blue-100">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <div class="p-2 bg-blue-100 rounded-lg text-blue-600">⚡</div>
+                        <h2 class="text-xl font-bold text-blue-800">Exercise Burn</h2>
+                    </div>
+
+                    <div class="mb-4 pb-4 border-b border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase">AI Estimation</p>
+                            <span class="text-[9px] font-extrabold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 ai-counter-badge">15 calls left</span>
+                        </div>
+                        <textarea id="exercise-desc" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 mb-2 bg-gray-50" rows="2" placeholder="e.g. 45 minute swim"></textarea>
+                        <button type="button" onclick="aiAnalyze('exercise')" class="touch-target w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 active:bg-blue-800 transition shadow-sm btn-compact text-sm">Ask AI</button>
+                    </div>
+
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Manual Entry</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                            <input type="text" id="manual-ex-name" placeholder="Exercise name" autocomplete="off" class="p-3 border rounded-lg bg-white w-full min-w-0">
+                            <input type="number" id="manual-ex-cal" placeholder="Calories" inputmode="numeric" class="p-3 border rounded-lg bg-white w-full min-w-0">
+                        </div>
+                        <button type="button" onclick="manualSubmit('exercise')" class="touch-target w-full bg-gray-100 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-200 active:bg-gray-300 transition btn-compact text-sm">Submit Manual</button>
+                    </div>
+
+                    <div id="exercise-confirm" class="hidden mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200 text-center">
+                        <p id="exercise-preview-val" class="text-3xl font-black text-blue-600"></p>
+                        <button type="button" onclick="commitLog('exercise')" class="touch-target w-full bg-blue-600 text-white py-3 rounded-lg font-bold mt-2 active:bg-blue-800 text-sm">Add to Exercise Log</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-cyan-100 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-4">
+                            <div class="p-2 bg-cyan-100 rounded-lg text-cyan-600">💧</div>
+                            <h2 class="text-xl font-bold text-cyan-800">Water Intake</h2>
+                        </div>
+
+                        <div class="mb-4 pb-4 border-b border-gray-100">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Quick Log</p>
+                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                <button type="button" onclick="quickWater(250)" class="touch-target bg-cyan-50 text-cyan-700 py-2 rounded-xl font-bold hover:bg-cyan-100 active:bg-cyan-200 transition text-xs flex flex-col items-center justify-center">
+                                    <span class="text-base">🥛</span>
+                                    <span>+250 ml</span>
+                                </button>
+                                <button type="button" onclick="quickWater(500)" class="touch-target bg-cyan-50 text-cyan-700 py-2 rounded-xl font-bold hover:bg-cyan-100 active:bg-cyan-200 transition text-xs flex flex-col items-center justify-center">
+                                    <span class="text-base">🧴</span>
+                                    <span>+500 ml</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Manual Entry</p>
+                            <div class="flex gap-2 mb-2">
+                                <input type="number" id="manual-water-val" placeholder="Amount (ml)" inputmode="numeric" class="p-3 border rounded-lg bg-white w-full min-w-0">
+                            </div>
+                            <button type="button" onclick="manualWaterSubmit()" class="touch-target w-full bg-cyan-600 text-white py-3 rounded-xl font-bold hover:bg-cyan-700 active:bg-cyan-800 transition shadow-sm btn-compact text-sm">Log Water</button>
+                        </div>
+                    </div>
+
+                    <!-- Water Progress Bar -->
+                    <div class="mt-4 pt-3 border-t border-gray-100">
+                        <div class="flex justify-between items-center text-xs mb-1">
+                            <span class="text-gray-400 font-bold uppercase text-[9px]">Today's Intake</span>
+                            <span id="water-progress-text" class="font-black text-cyan-600">0 / 2,000 ml</span>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div id="water-progress-bar" class="bg-cyan-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm overflow-hidden">
+                <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 mb-4">
+                    <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">Calorie trends</h2>
+                    <div class="flex gap-2 text-xs font-bold w-full sm:w-auto">
+                        <button type="button" data-days="7" onclick="setChartDays(7)" class="chart-range-btn touch-target flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-slate-900 text-white">7d</button>
+                        <button type="button" data-days="14" onclick="setChartDays(14)" class="chart-range-btn touch-target flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-gray-100 text-gray-600">14d</button>
+                        <button type="button" data-days="30" onclick="setChartDays(30)" class="chart-range-btn touch-target flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-gray-100 text-gray-600">30d</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-center text-xs">
+                    <div class="bg-green-50 rounded-xl p-3 sm:p-2 border border-green-100 flex sm:block items-center justify-between sm:text-center gap-2">
+                        <p class="text-gray-400 font-bold uppercase text-[9px] sm:mb-0">Food (period)</p>
+                        <p id="stat-food-total" class="text-base sm:text-lg font-black text-green-600 shrink-0">0</p>
+                    </div>
+                    <div class="bg-blue-50 rounded-xl p-3 sm:p-2 border border-blue-100 flex sm:block items-center justify-between sm:text-center gap-2">
+                        <p class="text-gray-400 font-bold uppercase text-[9px]">Exercise (period)</p>
+                        <p id="stat-ex-total" class="text-base sm:text-lg font-black text-blue-600 shrink-0">0</p>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-3 sm:p-2 border border-slate-200 flex sm:block items-center justify-between sm:text-center gap-2">
+                        <p class="text-gray-400 font-bold uppercase text-[9px]">Net (food − ex)</p>
+                        <p id="stat-net-total" class="text-base sm:text-lg font-black text-slate-800 shrink-0">0</p>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="trendChart"></canvas>
+                </div>
+                <p class="text-[10px] text-gray-400 text-center mt-3 px-1">Solid = daily · Dashed = 3-day trend (tablet+)</p>
+            </div>
+
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm overflow-hidden mt-4 sm:mt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">Water Intake History</h2>
+                    <div class="bg-cyan-50 text-cyan-600 px-3 py-1 rounded-full text-xs font-black border border-cyan-100" id="water-chart-total">
+                        Total: 0 ml
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="waterChart"></canvas>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                <div class="min-w-0">
+                    <h3 class="font-bold text-gray-500 mb-3 text-sm uppercase px-1 sm:px-2">Recent Food</h3>
+                    <div id="food-list" class="space-y-2 max-h-52 sm:max-h-60 overflow-y-auto pr-1"></div>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="font-bold text-gray-500 mb-3 text-sm uppercase px-1 sm:px-2">Recent Exercise</h3>
+                    <div id="ex-list" class="space-y-2 max-h-52 sm:max-h-60 overflow-y-auto pr-1"></div>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="font-bold text-gray-500 mb-3 text-sm uppercase px-1 sm:px-2">Recent Water</h3>
+                    <div id="water-list" class="space-y-2 max-h-52 sm:max-h-60 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 min-w-0">
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 lg:sticky lg:top-6">
+                <h2 class="text-lg font-black text-slate-800 mb-4 border-b pb-2 uppercase tracking-tighter italic">Reference Guide</h2>
+                <div class="space-y-4">
+                    <div class="pb-4 border-b border-dashed">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">History</p>
+                        <p id="history-count" class="text-sm text-slate-600 mb-2">0 entries saved</p>
+                        <button type="button" onclick="clearData()" class="touch-target w-full text-sm text-red-600 font-bold py-3 rounded-lg border border-red-100 hover:bg-red-50 active:bg-red-100">Clear all history</button>
+                    </div>
+                    <div class="pb-4 border-b border-dashed">
+                        <p class="text-[10px] font-bold text-amber-500 uppercase mb-2">🎯 Calorie Goal</p>
+                        <div class="bg-amber-50 rounded-xl p-3 border border-amber-200">
+                            <p class="text-xs font-bold text-amber-800">Target Net Calories</p>
+                            <p class="text-xl font-black text-amber-600 mt-0.5">2,000 net kcal</p>
+                            <p class="text-[10px] text-amber-700 mt-1 leading-relaxed">Aim for a daily net balance of 2,000 kcal (Food Intake minus Exercise Burn) to keep aligned with your target.</p>
+                            <p class="text-[10px] text-amber-700 mt-1 leading-relaxed font-bold">Also include 3.5 water bottles ( 75 ozs / 750 mls )</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-blue-500 uppercase">Back Stretches</p>
+                        <p class="text-sm text-slate-600">5 minute stretches</p>
+                        <p class="text-lg font-black text-slate-800">~25 calories</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-blue-500 uppercase">Walking the Dog</p>
+                        <p class="text-sm text-slate-600">1 mile walk</p>
+                        <p class="text-lg font-black text-slate-800">~150 calories</p>
+                    </div>
+                    <div class="pt-4 border-t border-dashed">
+                        <p class="text-xs font-bold text-green-500 uppercase">Crispy Chicken Salad</p>
+                        <p class="text-sm text-slate-600">Average serving</p>
+                        <p class="text-lg font-black text-slate-800">~630 calories</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const API_KEY = window.APP_CONFIG?.API_KEY ?? '';
+        const MODEL_NAME = window.APP_CONFIG?.MODEL_NAME ?? 'gemini-2.5-flash-lite';
+        const STORAGE_KEY = 'healthLogs_v4';
+        let chartDays = 7;
+        let logs = loadLogsLocal();
+        let pending = { type: '', desc: '', val: 0 };
+        let syncMode = 'checking';
+
+        function toDayKey(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function parseDayKeyFromLegacy(dateStr) {
+            if (!dateStr) return null;
+            const parsed = new Date(dateStr);
+            return Number.isNaN(parsed.getTime()) ? null : toDayKey(parsed);
+        }
+
+        function loadLogsLocal() {
+            const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('healthLogs_v3');
+            if (!raw) return [];
+            try {
+                const parsed = JSON.parse(raw);
+                const migrated = parsed.map((l) => ({
+                    ...l,
+                    id: l.id || crypto.randomUUID(),
+                    dayKey: l.dayKey || parseDayKeyFromLegacy(l.date) || toDayKey(new Date()),
+                    val: Number(l.val) || 0,
+                }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+                return migrated;
+            } catch (e) {
+                console.error("Failed to parse cached local logs:", e);
+                return [];
+            }
+        }
+
+        function loadLogs() {
+            return loadLogsLocal();
+        }
+
+        function persistLogs() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+            saveLogsToS3(logs);
+        }
+
+        function updateSyncBadge(mode, details = '') {
+            const badge = document.getElementById('sync-status-badge');
+            if (!badge) return;
+            
+            let html = '';
+            switch (mode) {
+                case 'checking':
+                    html = `<span class="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                            <span>Checking Cloud Storage...</span>`;
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-blue-300 border border-blue-900/50 transition-all duration-300';
+                    badge.title = 'Connecting to storage endpoints...';
+                    break;
+                case 'local':
+                    html = `<span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                            <span>📁 Local Mode</span>`;
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-800/80 text-slate-400 border border-slate-700 transition-all duration-300';
+                    badge.title = 'Running locally with browser storage. Configure S3 credentials on Netlify to enable cloud sync.';
+                    break;
+                case 'syncing':
+                    html = `<span class="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                            <span>🔄 Syncing with S3...</span>`;
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-blue-400 border border-blue-800 transition-all duration-300';
+                    badge.title = 'Uploading new calorie log history to AWS S3...';
+                    break;
+                case 'synced':
+                    html = `<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                            <span>☁️ S3 Synced</span>`;
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/40 text-emerald-400 border border-emerald-900/50 transition-all duration-300';
+                    badge.title = 'Your calorie logs are securely synced and saved in your AWS S3 bucket: healthwebsitejl';
+                    break;
+                case 'bootstrapped':
+                    html = `<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                            <span>☁️ S3 Bootstrapped</span>`;
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/40 text-emerald-400 border border-emerald-900/50 transition-all duration-300';
+                    badge.title = 'Successfully uploaded your existing local calorie history to your new S3 bucket!';
+                    setTimeout(() => {
+                        if (syncMode === 'synced') updateSyncBadge('synced');
+                    }, 4000);
+                    break;
+                case 'error':
+                    html = `<span class="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                            <span>⚠️ S3 Sync Error</span>`;
+                    badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-950/40 text-rose-400 border border-rose-900/50 transition-all duration-300';
+                    badge.title = `S3 connection failed: ${details || 'Check console logs for details'}`;
+                    break;
+            }
+            badge.innerHTML = html;
+        }
+
+        async function syncWithS3() {
+            updateSyncBadge('checking');
+            try {
+                const res = await fetch('/.netlify/functions/get-logs');
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                const data = await res.json();
+                
+                if (data.status === 'unconfigured') {
+                    syncMode = 'local';
+                    updateSyncBadge('local');
+                    console.log('S3 storage credentials not set. Running in Local Storage mode.');
+                    return;
+                }
+                
+                if (data.status === 'error') {
+                    throw new Error(data.message || 'Unknown server error');
+                }
+                
+                const s3Logs = data.logs || [];
+                
+                if (s3Logs.length === 0 && logs.length > 0) {
+                    console.log('S3 storage is empty. Bootstrapping S3 with existing local history...');
+                    syncMode = 'synced'; 
+                    await saveLogsToS3(logs, true);
+                    return;
+                }
+                
+                logs = s3Logs;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+                
+                syncMode = 'synced';
+                updateSyncBadge('synced');
+                updateUI();
+            } catch (err) {
+                console.error('S3 Sync Failed:', err);
+                syncMode = 'error';
+                updateSyncBadge('error', err.message);
+                updateUI();
+            }
+        }
+
+        async function saveLogsToS3(newLogs, isBootstrap = false) {
+            if (syncMode === 'local' || syncMode === 'unconfigured') {
+                return;
+            }
+            
+            updateSyncBadge('syncing');
+            try {
+                const res = await fetch('/.netlify/functions/save-logs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ logs: newLogs })
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                
+                const data = await res.json();
+                
+                if (data.status === 'unconfigured') {
+                    syncMode = 'local';
+                    updateSyncBadge('local');
+                    return;
+                }
+                
+                if (data.status === 'success') {
+                    syncMode = 'synced';
+                    updateSyncBadge(isBootstrap ? 'bootstrapped' : 'synced');
+                } else {
+                    throw new Error(data.message || 'Save operation failed');
+                }
+            } catch (err) {
+                console.error('Failed to write logs to S3:', err);
+                syncMode = 'error';
+                updateSyncBadge('error', err.message);
+            }
+        }
+
+        function getDayRange(numDays) {
+            const keys = [];
+            const labels = [];
+            for (let i = numDays - 1; i >= 0; i--) {
+                const d = new Date();
+                d.setHours(0, 0, 0, 0);
+                d.setDate(d.getDate() - i);
+                const key = toDayKey(d);
+                keys.push(key);
+                labels.push(chartLabelForDay(key, numDays));
+            }
+            return { keys, labels };
+        }
+
+        function sumForDay(dayKey, type) {
+            return logs
+                .filter((l) => l.dayKey === dayKey && l.type === type)
+                .reduce((s, l) => s + l.val, 0);
+        }
+
+        function movingAverage(series, windowSize = 3) {
+            return series.map((_, i) => {
+                const start = Math.max(0, i - windowSize + 1);
+                const slice = series.slice(start, i + 1);
+                const sum = slice.reduce((a, b) => a + b, 0);
+                return Math.round(sum / slice.length);
+            });
+        }
+
+        function isMobileView() {
+            return window.matchMedia('(max-width: 639px)').matches;
+        }
+
+        function chartLabelForDay(dayKey, numDays) {
+            const [y, m, d] = dayKey.split('-').map(Number);
+            const date = new Date(y, m - 1, d);
+            if (isMobileView() && numDays > 14) {
+                return date.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
+            }
+            return date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+        }
+
+        function setChartDays(days) {
+            chartDays = days;
+            document.querySelectorAll('.chart-range-btn').forEach((btn) => {
+                const active = Number(btn.dataset.days) === days;
+                btn.className = active
+                    ? 'chart-range-btn touch-target flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-slate-900 text-white text-xs font-bold'
+                    : 'chart-range-btn touch-target flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold';
+            });
+            updateUI();
+        }
+
+        const AI_LIMIT = 15; // Daily free tier safety budget
+
+        function getAICallsLeft() {
+            const today = toDayKey(new Date());
+            const savedDate = localStorage.getItem('ai_calls_date');
+            let count = parseInt(localStorage.getItem('ai_calls_count') || '0', 10);
+            
+            if (savedDate !== today) {
+                count = 0;
+                localStorage.setItem('ai_calls_date', today);
+                localStorage.setItem('ai_calls_count', '0');
+            }
+            
+            return Math.max(0, AI_LIMIT - count);
+        }
+
+        function incrementAICallCount() {
+            const today = toDayKey(new Date());
+            let count = parseInt(localStorage.getItem('ai_calls_count') || '0', 10);
+            count++;
+            localStorage.setItem('ai_calls_date', today);
+            localStorage.setItem('ai_calls_count', count.toString());
+        }
+
+        function updateAICounterUI() {
+            const left = getAICallsLeft();
+            document.querySelectorAll('.ai-counter-badge').forEach(badge => {
+                badge.textContent = `${left} calls left`;
+                if (left === 0) {
+                    badge.className = 'text-[9px] font-extrabold text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-100 ai-counter-badge animate-pulse';
+                } else if (left <= 3) {
+                    badge.className = 'text-[9px] font-extrabold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 ai-counter-badge';
+                } else {
+                    badge.className = 'text-[9px] font-extrabold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 ai-counter-badge';
+                }
+            });
+        }
+
+        async function aiAnalyze(type) {
+            const left = getAICallsLeft();
+            if (left <= 0) {
+                alert("You have reached your daily limit of 15 AI calls.\n\nAI calls will reset tomorrow. Please use Manual Entry in the meantime.");
+                return;
+            }
+
+            const desc = document.getElementById(type + '-desc').value;
+            if(!desc) return;
+            const prompt = `Estimate calories for this ${type}: "${desc}". Return ONLY the number.`;
+            try {
+                if (!API_KEY || API_KEY.trim().length < 10 || API_KEY.includes('PASTE_YOUR')) {
+                    alert(
+                        "Missing API key.\n\n" +
+                        "Local: copy config.example.js to config.js and add your key from https://aistudio.google.com/apikey\n" +
+                        "Netlify: set GEMINI_API_KEY in Site → Environment variables."
+                    );
+                    return;
+                }
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${encodeURIComponent(API_KEY)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const apiMsg =
+                        data?.error?.message ||
+                        data?.message ||
+                        `Request failed (${response.status} ${response.statusText})`;
+                    console.error("AI request failed:", { status: response.status, data });
+
+                    // Common: key has zero quota / billing not enabled / project rate-limited.
+                    const msgLower = String(apiMsg).toLowerCase();
+                    if (response.status === 429 || msgLower.includes("quota") || msgLower.includes("rate") || msgLower.includes("limit 0")) {
+                        alert(
+                            "AI request failed: Rate limit or quota exhausted for this model.\n\n" +
+                            "Fix: In config.js set MODEL_NAME to gemini-2.5-flash-lite (or gemini-2.5-flash).\n" +
+                            "Also check https://aistudio.google.com/apikey — enable billing if free tier is used up.\n\n" +
+                            `Details: ${apiMsg}`
+                        );
+                        return;
+                    }
+
+                    if (response.status === 404) {
+                        alert(
+                            `AI request failed: Model "${MODEL_NAME}" not found.\n\n` +
+                            "Try MODEL_NAME = \"gemini-2.5-flash-lite\" in config.js.\n\n" +
+                            `Details: ${apiMsg}`
+                        );
+                        return;
+                    }
+
+                    alert(`AI request failed: ${apiMsg}`);
+                    return;
+                }
+
+                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (typeof text !== 'string') {
+                    console.error("Unexpected AI response shape:", data);
+                    alert("AI returned an unexpected response. Check console for details.");
+                    return;
+                }
+
+                const val = parseInt(text.trim().replace(/[^0-9]/g, ''), 10);
+                if (Number.isNaN(val)) {
+                    console.error("Could not parse calorie number from:", { text, data });
+                    alert("AI response didn't contain a calorie number. Try rephrasing.");
+                    return;
+                }
+
+                incrementAICallCount();
+                updateAICounterUI();
+
+                pending = { type, desc, val };
+                document.getElementById(type + '-confirm').classList.remove('hidden');
+                document.getElementById(type + '-preview-val').innerText = val + " kcal";
+            } catch(e) {
+                console.error("AI error:", e);
+                alert(`AI error: ${e?.message || e}. Use manual entry.`);
+            }
+        }
+
+        // New Manual Submit Logic
+        function manualSubmit(type) {
+            const nameId = type === 'food' ? 'manual-food-name' : 'manual-ex-name';
+            const calId = type === 'food' ? 'manual-food-cal' : 'manual-ex-cal';
+            
+            const desc = document.getElementById(nameId).value;
+            const val = parseInt(document.getElementById(calId).value);
+            
+            if (desc && !isNaN(val)) {
+                saveToLog(type, desc, val);
+                document.getElementById(nameId).value = "";
+                document.getElementById(calId).value = "";
+            } else {
+                alert("Please enter both a name and calorie amount.");
+            }
+        }
+
+        function commitLog(type) {
+            saveToLog(pending.type, pending.desc, pending.val);
+            document.getElementById(type + '-confirm').classList.add('hidden');
+            document.getElementById(type + '-desc').value = "";
+        }
+
+        function saveToLog(type, desc, val) {
+            const now = new Date();
+            logs.unshift({
+                id: crypto.randomUUID(),
+                type,
+                desc,
+                val: Number(val) || 0,
+                dayKey: toDayKey(now),
+                date: now.toLocaleDateString(),
+                time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            });
+            persistLogs();
+            updateUI();
+        }
+
+        function clearData() {
+            if (!confirm('Clear all food and exercise history? This cannot be undone.')) return;
+            logs = [];
+            persistLogs();
+            updateUI();
+        }
+
+        function quickWater(amount) {
+            saveToLog('water', 'Water Intake', amount);
+        }
+
+        function manualWaterSubmit() {
+            const input = document.getElementById('manual-water-val');
+            const amount = parseInt(input.value, 10);
+            if (!isNaN(amount) && amount > 0) {
+                saveToLog('water', 'Water Intake', amount);
+                input.value = '';
+            } else {
+                alert('Please enter a valid water amount in ml.');
+            }
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function updateUI() {
+            const foodList = document.getElementById('food-list');
+            const exList = document.getElementById('ex-list');
+            const waterList = document.getElementById('water-list');
+            
+            const foodLogs = logs.filter((l) => l.type === 'food');
+            const exLogs = logs.filter((l) => l.type === 'exercise');
+            const waterLogs = logs.filter((l) => l.type === 'water');
+
+            document.getElementById('history-count').textContent =
+                `${logs.length} entries saved (${foodLogs.length} food, ${exLogs.length} exercise, ${waterLogs.length} water)`;
+
+            const itemHtml = (l) => `
+                <div class="flex justify-between items-start gap-2 p-3 bg-white rounded-xl border border-gray-100 shadow-sm text-xs">
+                    <div class="min-w-0 flex-1"><b class="break-words">${escapeHtml(l.desc)}</b><br><span class="text-[9px] text-gray-400 font-bold">${escapeHtml(l.date)} · ${escapeHtml(l.time)}</span></div>
+                    <span class="font-black shrink-0 ${l.type === 'food' ? 'text-green-500' : l.type === 'exercise' ? 'text-blue-500' : 'text-cyan-500'}">${l.val} ${l.type === 'water' ? 'ml' : 'kcal'}</span>
+                </div>`;
+
+            foodList.innerHTML = foodLogs.length
+                ? foodLogs.map(itemHtml).join('')
+                : '<p class="text-xs text-gray-400 px-2">No food entries yet.</p>';
+            exList.innerHTML = exLogs.length
+                ? exLogs.map(itemHtml).join('')
+                : '<p class="text-xs text-gray-400 px-2">No exercise entries yet.</p>';
+            waterList.innerHTML = waterLogs.length
+                ? waterLogs.map(itemHtml).join('')
+                : '<p class="text-xs text-gray-400 px-2">No water entries yet.</p>';
+
+            // Calculate live water tracker status
+            const todayKey = toDayKey(new Date());
+            const todayWater = logs
+                .filter(l => l.dayKey === todayKey && l.type === 'water')
+                .reduce((sum, l) => sum + l.val, 0);
+
+            const waterTarget = 2000;
+            const pct = Math.min(100, Math.round((todayWater / waterTarget) * 100));
+            document.getElementById('water-progress-text').textContent = `${todayWater.toLocaleString()} / ${waterTarget.toLocaleString()} ml`;
+            document.getElementById('water-progress-bar').style.width = `${pct}%`;
+
+            const { keys, labels } = getDayRange(chartDays);
+            const foodData = keys.map((k) => sumForDay(k, 'food'));
+            const exData = keys.map((k) => sumForDay(k, 'exercise'));
+            const netData = keys.map((_, i) => foodData[i] - exData[i]);
+            const foodTrend = movingAverage(foodData, 3);
+            const exTrend = movingAverage(exData, 3);
+
+            const foodTotal = foodData.reduce((a, b) => a + b, 0);
+            const exTotal = exData.reduce((a, b) => a + b, 0);
+            document.getElementById('stat-food-total').textContent = foodTotal.toLocaleString() + ' kcal';
+            document.getElementById('stat-ex-total').textContent = exTotal.toLocaleString() + ' kcal';
+            const netEl = document.getElementById('stat-net-total');
+            const net = foodTotal - exTotal;
+            netEl.textContent = (net >= 0 ? '+' : '') + net.toLocaleString() + ' kcal';
+            netEl.className = 'text-lg font-black ' + (net > 0 ? 'text-amber-600' : net < 0 ? 'text-blue-600' : 'text-slate-800');
+
+            const mobile = isMobileView();
+            const datasets = [
+                {
+                    label: 'Food Intake',
+                    data: foodData,
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.15)',
+                    borderWidth: mobile ? 2.5 : 2,
+                    pointRadius: mobile ? 2 : 4,
+                    tension: 0.25,
+                    fill: true,
+                },
+                {
+                    label: 'Exercise Burn',
+                    data: exData,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    borderWidth: mobile ? 2.5 : 2,
+                    pointRadius: mobile ? 2 : 4,
+                    tension: 0.25,
+                    fill: true,
+                },
+            ];
+            if (!mobile) {
+                datasets.push(
+                    {
+                        label: 'Food Intake Trend',
+                        data: foodTrend,
+                        borderColor: '#15803d',
+                        borderDash: [6, 4],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: false,
+                    },
+                    {
+                        label: 'Exercise Burn Trend',
+                        data: exTrend,
+                        borderColor: '#1d4ed8',
+                        borderDash: [6, 4],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: false,
+                    }
+                );
+            }
+            datasets.push({
+                label: 'Net (Food - Exercise)',
+                data: netData,
+                borderColor: '#d97706',
+                borderWidth: 2,
+                pointRadius: mobile ? 0 : 3,
+                tension: 0.25,
+                fill: false,
+            });
+
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 10,
+                                padding: mobile ? 8 : 12,
+                                font: { size: mobile ? 9 : 10 },
+                            },
+                        },
+                        tooltip: {
+                            titleFont: { size: mobile ? 11 : 12 },
+                            bodyFont: { size: mobile ? 11 : 12 },
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} kcal`,
+                            },
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { font: { size: mobile ? 10 : 11 }, maxTicksLimit: mobile ? 5 : 8 },
+                            title: { display: !mobile, text: 'Calories' },
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: mobile ? 9 : 10 },
+                                maxRotation: mobile ? 45 : 0,
+                                minRotation: mobile ? 45 : 0,
+                                autoSkip: true,
+                                maxTicksLimit: mobile ? 7 : 14,
+                            },
+                        },
+                    },
+                },
+            });
+
+            // Render Water History Bar Chart
+            const waterData = keys.map((k) => sumForDay(k, 'water'));
+            const waterTotal = waterData.reduce((a, b) => a + b, 0);
+            document.getElementById('water-chart-total').textContent = `Total: ${waterTotal.toLocaleString()} ml`;
+
+            const waterCtx = document.getElementById('waterChart').getContext('2d');
+            if (window.myWaterChart) window.myWaterChart.destroy();
+            window.myWaterChart = new Chart(waterCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Water Intake',
+                        data: waterData,
+                        backgroundColor: 'rgba(6, 182, 212, 0.6)',
+                        borderColor: '#0891b2',
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.parsed.y} ml`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { font: { size: mobile ? 10 : 11 }, maxTicksLimit: 5 },
+                            title: { display: !mobile, text: 'Volume (ml)' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: mobile ? 9 : 10 },
+                                maxRotation: mobile ? 45 : 0,
+                                minRotation: mobile ? 45 : 0,
+                                autoSkip: true,
+                                maxTicksLimit: mobile ? 7 : 14
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(updateUI, 200);
+        });
+
+        window.onload = () => {
+            setChartDays(chartDays);
+            updateUI();
+            updateAICounterUI(); // Initialize AI calls counter UI
+            syncWithS3(); // Asynchronously sync with AWS S3 on load
+        };
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>HealthTrack AI 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
